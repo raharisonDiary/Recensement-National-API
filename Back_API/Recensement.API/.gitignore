@@ -1,0 +1,7 @@
+# Git ignore ho an'ny .NET
+bin/
+obj/
+.vs/
+*.user
+*.suo
+appsettings.json # Raha misy tenimiafina ao anatiny dia aza alefa any amin'ny public repo

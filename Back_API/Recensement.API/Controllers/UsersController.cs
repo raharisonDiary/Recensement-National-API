@@ -21,16 +21,15 @@ namespace Recensement.API.Controllers
             _tokenService = tokenService;
         }
 
-        // POST: api/Users/register
         [HttpPost("register")]
         public async Task<ActionResult<User>> Register(User user)
         {
+            if (user.Id == Guid.Empty) user.Id = Guid.NewGuid();
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
             return Ok(user);
         }
 
-        // POST: api/Users/login
         [HttpPost("login")]
         public async Task<ActionResult> Login(LoginDto loginDto)
         {
@@ -43,11 +42,11 @@ namespace Recensement.API.Controllers
             return Ok(new { user.Id, user.Nom, user.Cin, user.Role, Token = token });
         }
 
-        // --- GESTION DES AGENTS (CdC 3.2) ---
         [HttpPost("create-agent")]
         [Authorize(Roles = "Regional")] 
         public async Task<ActionResult> CreateAgent(User agent)
         {
+            agent.Id = Guid.NewGuid();
             agent.QrCodeSecret = Guid.NewGuid().ToString(); 
             agent.Role = "Agent";
             _context.Users.Add(agent);
@@ -66,7 +65,6 @@ namespace Recensement.API.Controllers
             return Ok(new { agent, token });
         }
 
-        // --- GESTION DES REGIONAUX (CdC 3.1 - Admin National) ---
         [HttpGet("regionaux")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<User>>> GetRegionaux()
@@ -78,6 +76,7 @@ namespace Recensement.API.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult> CreateRegional(User regional)
         {
+            regional.Id = Guid.NewGuid();
             regional.Role = "Regional";
             _context.Users.Add(regional);
             await _context.SaveChangesAsync();
@@ -86,7 +85,7 @@ namespace Recensement.API.Controllers
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> DeleteUser(int id)
+        public async Task<IActionResult> DeleteUser(Guid id) // Ovaina ho Guid id
         {
             var user = await _context.Users.FindAsync(id);
             if (user == null) return NotFound();
@@ -97,17 +96,12 @@ namespace Recensement.API.Controllers
 
         [HttpGet("generate-qr/{id}")]
         [Authorize(Roles = "Admin")]
-        public IActionResult GetQrCode(int id) {
-            var agent = _context.Users.Find(id);
+        public async Task<IActionResult> GetQrCode(Guid id) // Ovaina ho Guid id
+        {
+            var agent = await _context.Users.FindAsync(id);
 
-            // Eto isika no manao "null check"
-            if (agent == null)
-            {
-                return NotFound("Tsy hita ilay Agent.");
-            }
+            if (agent == null) return NotFound("Tsy hita ilay Agent.");
 
-            // Eto izao dia azo antoka fa tsy null ny 'agent'
-            // Fa mety mbola null ny QrCodeSecret, koa ampiasao ny ? na check-enao
             if (string.IsNullOrEmpty(agent.QrCodeSecret))
             {
                 return BadRequest("Mbola tsy misy QR Code ity Agent ity.");

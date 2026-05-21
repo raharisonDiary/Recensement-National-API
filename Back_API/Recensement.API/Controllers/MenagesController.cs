@@ -42,7 +42,7 @@ namespace Recensement.API.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Menage>> GetMenage(int id) 
+        public async Task<ActionResult<Menage>> GetMenage(Guid id) // Novana ho Guid
         {
             var menage = await _context.Menages.FindAsync(id);
             

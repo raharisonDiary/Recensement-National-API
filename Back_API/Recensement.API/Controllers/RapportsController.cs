@@ -15,10 +15,10 @@ namespace Recensement.API.Controllers
         public RapportsController(AppDbContext context) => _context = context;
 
         [HttpPost]
-        [Authorize(Roles = "Regional")] // Ny Régional ihany no afaka mandefa rapport
+        [Authorize(Roles = "Regional")]
         public async Task<ActionResult<Rapport>> SendRapport(Rapport rapport)
         {
-            rapport.DateEnvoi = DateTime.Now; // Manampy date automatique
+            rapport.DateEnvoi = DateTime.Now;
             _context.Rapports.Add(rapport);
             await _context.SaveChangesAsync();
             return Ok(rapport);
@@ -30,15 +30,14 @@ namespace Recensement.API.Controllers
             return await _context.Rapports.ToListAsync();
         }
 
-        // Fanampiny: Validation avy amin'ny Admin (CdC 3.1)
         [HttpPut("{id}/validate")]
-        [Authorize(Roles = "Admin")] // Admin ihany no afaka manao validation
-        public async Task<IActionResult> ValidateRapport(int id)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ValidateRapport(Guid id) // Ovaina ho Guid id
         {
             var rapport = await _context.Rapports.FindAsync(id);
             if (rapport == null) return NotFound();
 
-            rapport.IsValidated = true; // Ataovy azo antoka fa misy field 'IsValidated' ao amin'ny model Rapport
+            rapport.IsValidated = true; 
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Rapport validé avec succès." });

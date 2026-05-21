@@ -23,12 +23,12 @@ namespace Recensement.API.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Citoyen>> GetCitoyen(int id)
+        public async Task<ActionResult<Citoyen>> GetCitoyen(Guid id) // Novana ho Guid
         {
             // Fampiasana Include mba tsy ho null ny navigation properties raha ilaina
             var citoyen = await _context.Citoyens
                 .Include(c => c.Menage) 
-                .FirstOrDefaultAsync(c => c.Id == id);
+                .FirstOrDefaultAsync(c => c.Id == id); // Efa tsy hisy error intsony eto
 
             if (citoyen == null) return NotFound();
             return Ok(citoyen);
@@ -37,7 +37,6 @@ namespace Recensement.API.Controllers
         [HttpGet("search")]
         public async Task<ActionResult<IEnumerable<Citoyen>>> Search(string? query)
         {
-            // AsNoTracking dia manatsara ny performance rehefa tsy manao edit (read-only)
             var queryable = _context.Citoyens.AsNoTracking();
 
             if (string.IsNullOrWhiteSpace(query))

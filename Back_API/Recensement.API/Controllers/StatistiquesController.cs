@@ -25,17 +25,17 @@ namespace Recensement.API.Controllers
                 .Select(g => new { Sexe = g.Key, Count = g.Count() })
                 .ToListAsync();
 
-            // 2. Statistiques par Tranche d'Âge (Logika: Kajy taona)
+            // 2. Statistiques par Tranche d'Âge (Kajy taona marina kokoa)
             var today = DateTime.Today;
-            var citoyenData = await _context.Citoyens.Select(c => c.DateNaissance).ToListAsync();
+            var citoyenDates = await _context.Citoyens.Select(c => c.DateNaissance).ToListAsync();
             
             var statsAge = new {
-                Enfants = citoyenData.Count(d => (today.Year - d.Year) < 18),
-                Adultes = citoyenData.Count(d => (today.Year - d.Year) >= 18 && (today.Year - d.Year) < 60),
-                Seniors = citoyenData.Count(d => (today.Year - d.Year) >= 60)
+                Enfants = citoyenDates.Count(d => d.AddYears(18) > today),
+                Adultes = citoyenDates.Count(d => d.AddYears(18) <= today && d.AddYears(60) > today),
+                Seniors = citoyenDates.Count(d => d.AddYears(60) <= today)
             };
 
-            // 3. Statistiques par Région (M Ménage no misy info Région)
+            // 3. Statistiques par Région
             var statsParRegion = await _context.Menages
                 .GroupBy(m => m.Region)
                 .Select(g => new { Region = g.Key, TotalMenages = g.Count() })

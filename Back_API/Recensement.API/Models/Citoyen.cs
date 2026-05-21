@@ -6,12 +6,11 @@ namespace Recensement.API.Models
     public class Citoyen 
     {
         [Key]
-        public int Id { get; set; }
+        public Guid Id { get; set; } 
 
         [Required]
         public int MenageId { get; set; }
 
-        // Fampifandraisana amin'ny tabilao Menage
         [ForeignKey("MenageId")]
         public Menage? Menage { get; set; }
 

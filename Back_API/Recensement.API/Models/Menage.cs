@@ -6,10 +6,10 @@ namespace Recensement.API.Models
     public class Menage 
     {
         [Key]
-        public int Id { get; set; }
+        public Guid Id { get; set; } // Ovaina ho Guid
 
         [Required]
-        public int AgentId { get; set; }
+        public Guid AgentId { get; set; } // Ovaina ho Guid
 
         // Fampifandraisana amin'ny tabilao User (Agent)
         [ForeignKey("AgentId")]

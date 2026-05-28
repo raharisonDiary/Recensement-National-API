@@ -11,8 +11,8 @@ using Recensement.API.Data;
 namespace Recensement.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260520102955_UpdateModels")]
-    partial class UpdateModels
+    [Migration("20260521072802_FixGuidIssue")]
+    partial class FixGuidIssue
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,9 +24,9 @@ namespace Recensement.API.Migrations
 
             modelBuilder.Entity("Recensement.API.Models.Citoyen", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("char(36)");
 
                     b.Property<DateTime>("DateNaissance")
                         .HasColumnType("datetime(6)");
@@ -34,8 +34,8 @@ namespace Recensement.API.Migrations
                     b.Property<bool>("EstMarie")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<int>("MenageId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("MenageId")
+                        .HasColumnType("char(36)");
 
                     b.Property<int?>("NbEnfants")
                         .HasColumnType("int");
@@ -66,16 +66,16 @@ namespace Recensement.API.Migrations
 
             modelBuilder.Entity("Recensement.API.Models.Menage", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("char(36)");
 
                     b.Property<string>("Adresse")
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
 
-                    b.Property<int>("AgentId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("AgentId")
+                        .HasColumnType("char(36)");
 
                     b.Property<DateTime>("DateCreation")
                         .HasColumnType("datetime(6)");
@@ -127,8 +127,8 @@ namespace Recensement.API.Migrations
                     b.Property<bool>("IsValidated")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<int>("RegionalId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("RegionalId")
+                        .HasColumnType("char(36)");
 
                     b.HasKey("Id");
 
@@ -139,9 +139,9 @@ namespace Recensement.API.Migrations
 
             modelBuilder.Entity("Recensement.API.Models.User", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("char(36)");
 
                     b.Property<string>("Cin")
                         .IsRequired()

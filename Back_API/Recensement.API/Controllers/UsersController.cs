@@ -2,8 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Recensement.API.Data;
 using Recensement.API.Models;
 using Recensement.API.Services;
-using Microsoft.EntityFrameworkCore;
 using Recensement.API.DTOs;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Recensement.API.Controllers
@@ -21,100 +21,126 @@ namespace Recensement.API.Controllers
             _tokenService = tokenService;
         }
 
-        [HttpPost("register")]
-        public async Task<ActionResult<User>> Register(User user)
-        {
-            if (user.Id == Guid.Empty) user.Id = Guid.NewGuid();
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-            return Ok(user);
-        }
-
+        // --- LOGIN ---
         [HttpPost("login")]
         public async Task<ActionResult> Login(LoginDto loginDto)
         {
             var user = await _context.Users
+                .Include(u => u.Profile)
                 .FirstOrDefaultAsync(u => u.Cin == loginDto.Cin && u.PasswordHash == loginDto.Password);
 
             if (user == null) return Unauthorized("Misy diso ny CIN na ny Password.");
-
+            
             var token = _tokenService.CreateToken(user);
-            return Ok(new { user.Id, user.Nom, user.Cin, user.Role, Token = token });
+            return Ok(new { user.Id, user.Role, Nom = user.Profile?.Nom, Token = token });
         }
 
-        [HttpPost("create-agent")]
-        [Authorize(Roles = "Regional")] 
-        public async Task<ActionResult> CreateAgent(User agent)
-        {
-            agent.Id = Guid.NewGuid();
-            agent.QrCodeSecret = Guid.NewGuid().ToString(); 
-            agent.Role = "Agent";
-            _context.Users.Add(agent);
-            await _context.SaveChangesAsync();
-            return Ok(new { message = "Agent crée avec succès", agent.QrCodeSecret });
-        }
-
-        [HttpPost("agent-login")]
-        public async Task<ActionResult> AgentLogin(string qrCodeSecret)
-        {
-            var agent = await _context.Users
-                .FirstOrDefaultAsync(u => u.QrCodeSecret == qrCodeSecret && u.Role == "Agent");
-
-            if (agent == null) return Unauthorized("QR Code tsy manan-kery.");
-            var token = _tokenService.CreateToken(agent);
-            return Ok(new { agent, token });
-        }
-
+        // --- GESTION RÉGIONAUX (Admin ihany) ---
         [HttpGet("regionaux")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<IEnumerable<User>>> GetRegionaux()
+        public async Task<ActionResult> GetRegionaux()
         {
-            return await _context.Users.Where(u => u.Role == "Regional").ToListAsync();
+            // Ampiasao ny .Select() mba hisorohana ny Circular Reference
+            var regionaux = await _context.Users
+                .Where(u => u.Role == "Regional")
+                .Select(u => new {
+                    u.Id,
+                    u.Cin,
+                    u.Role,
+                    Nom = u.Profile != null ? u.Profile.Nom : "N/A",
+                    Prenom = u.Profile != null ? u.Profile.Prenom : "N/A"
+                })
+                .ToListAsync();
+                
+            return Ok(regionaux);
         }
+
+        [HttpPut("update-regional/{id}")]
+[Authorize(Roles = "Admin")]
+public async Task<IActionResult> UpdateRegional(Guid id, UserUpdateDto dto)
+{
+    var user = await _context.Users.Include(u => u.Profile).FirstOrDefaultAsync(u => u.Id == id);
+    if (user == null) return NotFound();
+    
+    user.Profile.Nom = dto.Nom;
+    // Ampio ny field hafa rehetra...
+    await _context.SaveChangesAsync();
+    return Ok();
+}
 
         [HttpPost("create-regional")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult> CreateRegional(User regional)
+        public async Task<ActionResult> CreateRegional(RegionalRegistrationDto dto)
         {
-            regional.Id = Guid.NewGuid();
-            regional.Role = "Regional";
-            _context.Users.Add(regional);
+            var user = new User {
+                Id = Guid.NewGuid(),
+                Cin = dto.Cin,
+                PasswordHash = dto.Password,
+                Role = "Regional",
+                QrCodeSecret = Guid.NewGuid().ToString(),
+                Profile = new AgentProfile {
+                    Id = Guid.NewGuid(),
+                    Nom = dto.Nom,
+                    Prenom = dto.Prenom
+                }
+            };
+            _context.Users.Add(user);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Responsable Régional voaforona." });
+            return Ok(new { message = "Responsable Régional voaforona.", qrCode = user.QrCodeSecret });
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("delete-regional/{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> DeleteUser(Guid id) // Ovaina ho Guid id
+        public async Task<IActionResult> DeleteRegional(Guid id)
         {
-            var user = await _context.Users.FindAsync(id);
-            if (user == null) return NotFound();
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id && u.Role == "Regional");
+            if (user == null) return NotFound("Tsy hita ilay Régional.");
+            
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Voafafa ny kaonty." });
+            return Ok(new { message = "Voafafa soa aman-tsara ny Régional." });
         }
 
-        [HttpGet("generate-qr/{id}")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetQrCode(Guid id) // Ovaina ho Guid id
+        // --- GESTION AGENTS ---
+        [HttpGet("agents")]
+        [Authorize(Roles = "Regional, Admin")]
+        public async Task<ActionResult> GetAgents()
         {
-            var agent = await _context.Users.FindAsync(id);
-
-            if (agent == null) return NotFound("Tsy hita ilay Agent.");
-
-            if (string.IsNullOrEmpty(agent.QrCodeSecret))
-            {
-                return BadRequest("Mbola tsy misy QR Code ity Agent ity.");
-            }
-
-            var qr = new QrService().GenerateQrCode(agent.QrCodeSecret);
-            return Ok(new { QrImageBase64 = qr });
+            var agents = await _context.Users
+                .Where(u => u.Role == "Agent")
+                .Select(u => new {
+                    u.Id,
+                    u.Cin,
+                    Nom = u.Profile != null ? u.Profile.Nom : "N/A",
+                    Prenom = u.Profile != null ? u.Profile.Prenom : "N/A",
+                    Region = u.Profile != null ? u.Profile.RegionAssigned : "N/A"
+                })
+                .ToListAsync();
+            return Ok(agents);
         }
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<User>>> GetUsers()
+        [HttpPost("create-agent")]
+        [Authorize(Roles = "Regional, Admin")]
+        public async Task<ActionResult> CreateAgent(AgentRegistrationDto dto)
         {
-            return await _context.Users.ToListAsync();
+            var user = new User {
+                Id = Guid.NewGuid(),
+                Cin = dto.Cin,
+                PasswordHash = "default123",
+                Role = "Agent",
+                QrCodeSecret = Guid.NewGuid().ToString(),
+                Profile = new AgentProfile {
+                    Id = Guid.NewGuid(),
+                    Nom = dto.Nom,
+                    Prenom = dto.Prenom,
+                    Telephone = dto.Telephone,
+                    Adresse = dto.Adresse,
+                    RegionAssigned = dto.RegionAssigned
+                }
+            };
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Agent voaforona", qrCode = user.QrCodeSecret });
         }
     }
 }

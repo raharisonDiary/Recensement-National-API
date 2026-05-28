@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -9,7 +10,7 @@ namespace Recensement.API.Models
         public Guid Id { get; set; } 
 
         [Required]
-        public int MenageId { get; set; }
+        public Guid MenageId { get; set; }
 
         [ForeignKey("MenageId")]
         public Menage? Menage { get; set; }

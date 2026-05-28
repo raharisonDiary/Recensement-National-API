@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -6,17 +7,18 @@ namespace Recensement.API.Models
     public class Rapport 
     {
         [Key]
-        public int Id { get; set; }
+        public Guid Id { get; set; } // Novana ho Guid mba hitovy amin'ny modely hafa
 
         [Required]
-        public int RegionalId { get; set; }
+        public Guid RegionalId { get; set; }
 
-        // Fampifandraisana amin'ny mpitantana nanao ny rapport
         [ForeignKey("RegionalId")]
         public User? Regional { get; set; }
 
         [Required]
         public string Contenu { get; set; } = string.Empty;
+
+        public string? ReponseAdmin { get; set; } // Valin-tenin'ny Admin
 
         public DateTime DateEnvoi { get; set; } = DateTime.Now;
 

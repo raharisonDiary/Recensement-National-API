@@ -18,6 +18,7 @@ namespace Recensement.API.Controllers
         [Authorize(Roles = "Regional")]
         public async Task<ActionResult<Rapport>> SendRapport(Rapport rapport)
         {
+            rapport.Id = Guid.NewGuid();
             rapport.DateEnvoi = DateTime.Now;
             _context.Rapports.Add(rapport);
             await _context.SaveChangesAsync();
@@ -27,20 +28,36 @@ namespace Recensement.API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Rapport>>> GetRapports() 
         {
-            return await _context.Rapports.ToListAsync();
+            // Mampiseho ny rapport miaraka amin'ny anaran'ny Regional nanao azy
+            return await _context.Rapports
+                .Include(r => r.Regional)
+                .ThenInclude(u => u.Profile)
+                .OrderByDescending(r => r.DateEnvoi)
+                .ToListAsync();
         }
 
         [HttpPut("{id}/validate")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> ValidateRapport(Guid id) // Ovaina ho Guid id
+        public async Task<IActionResult> ValidateRapport(Guid id)
         {
             var rapport = await _context.Rapports.FindAsync(id);
             if (rapport == null) return NotFound();
 
             rapport.IsValidated = true; 
             await _context.SaveChangesAsync();
+            return Ok(new { message = "Rapport validé." });
+        }
 
-            return Ok(new { message = "Rapport validé avec succès." });
+        [HttpPut("{id}/reply")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ReplyRapport(Guid id, [FromBody] string reponse)
+        {
+            var rapport = await _context.Rapports.FindAsync(id);
+            if (rapport == null) return NotFound();
+
+            rapport.ReponseAdmin = reponse;
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Valin-teny nalefa soa aman-tsara." });
         }
     }
 }

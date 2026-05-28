@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Recensement.API.Controllers
 {
-    [Authorize] // Voaaro daholo ny endpoints rehetra
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class MenagesController : ControllerBase
@@ -21,18 +21,25 @@ namespace Recensement.API.Controllers
         [HttpPost]
         public async Task<ActionResult<Menage>> CreateMenage(Menage menage)
         {
+            // 1. Manamarina raha feno ny data (ohatra: AgentId tsy tokony ho null)
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            // 2. Raha tsy misy ID (GUID) dia amboary
+            if (menage.Id == Guid.Empty) menage.Id = Guid.NewGuid();
+            
             _context.Menages.Add(menage);
             await _context.SaveChangesAsync();
-            return Ok(menage);
+
+            // 3. Mamerina ny Menage misy ny ID vaovao
+            return CreatedAtAction(nameof(GetMenage), new { id = menage.Id }, menage);
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Menage>>> GetMenages() 
         {
-            return await _context.Menages.ToListAsync();
+            return await _context.Menages.Include(m => m.Citoyens).ToListAsync();
         }
 
-        // Fikarohana isam-paritra (CdC 3.2 - Supervision par région)
         [HttpGet("by-region/{region}")]
         public async Task<ActionResult<IEnumerable<Menage>>> GetMenagesByRegion(string region)
         {
@@ -42,9 +49,11 @@ namespace Recensement.API.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Menage>> GetMenage(Guid id) // Novana ho Guid
+        public async Task<ActionResult<Menage>> GetMenage(Guid id)
         {
-            var menage = await _context.Menages.FindAsync(id);
+            var menage = await _context.Menages
+                .Include(m => m.Citoyens) // Ampiana Include raha te-hahita ny Citoyens ao anatiny
+                .FirstOrDefaultAsync(m => m.Id == id);
             
             if (menage == null) return NotFound();
             

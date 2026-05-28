@@ -6,10 +6,10 @@ namespace Recensement.API.Models
     public class Menage 
     {
         [Key]
-        public Guid Id { get; set; } // Ovaina ho Guid
+        public Guid Id { get; set; }
 
         [Required]
-        public Guid AgentId { get; set; } // Ovaina ho Guid
+        public Guid AgentId { get; set; } 
 
         // Fampifandraisana amin'ny tabilao User (Agent)
         [ForeignKey("AgentId")]
@@ -40,7 +40,6 @@ namespace Recensement.API.Models
 
         public bool IsSynced { get; set; } = false;
 
-        // Relation: Ménage iray dia manana Citoyens maro
         public ICollection<Citoyen> Citoyens { get; set; } = new List<Citoyen>();
     }
 }

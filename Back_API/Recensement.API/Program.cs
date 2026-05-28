@@ -3,24 +3,18 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Recensement.API.Data;
 using System.Text;
-using Microsoft.OpenApi.Models; // Ilaina ho an'ny Swagger
+using Microsoft.OpenApi.Models;
+using Recensement.API.Middleware;
+using System.Security.Claims; // <--- ITY NO TSY HITA
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. CORS Configuration
-builder.Services.AddCors(options => {
-    options.AddPolicy("AllowAll", builder => 
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader());
-});
-
-// 2. Database Configuration
+// 1. Database Configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
-// 3. JWT Authentication Configuration
+// 2. JWT Authentication Configuration
 var key = Encoding.UTF8.GetBytes("ItY_Key_Tena_Miafina_32_Chars_Ity!!");
 builder.Services.AddAuthentication(options => {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -31,8 +25,18 @@ builder.Services.AddAuthentication(options => {
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(key),
         ValidateIssuer = false,
-        ValidateAudience = false
+        ValidateAudience = false,
+        // Efa marina tsara ity
+        RoleClaimType = ClaimTypes.Role 
     };
+});
+
+// 3. CORS Configuration
+builder.Services.AddCors(options => {
+    options.AddPolicy("AllowAll", policy => 
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader()); 
 });
 
 builder.Services.AddScoped<Recensement.API.Services.TokenService>();
@@ -40,7 +44,7 @@ builder.Services.AddScoped<Recensement.API.Services.QrService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// 4. Swagger Configuration with Bearer Auth
+// 4. Swagger Configuration
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -50,7 +54,7 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Soraty eto: Bearer [ny_token_anao]"
+        Description = "Soraty eto: Bearer [token]"
     });
 
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -58,11 +62,7 @@ builder.Services.AddSwaggerGen(options =>
         {
             new OpenApiSecurityScheme
             {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
             },
             new string[] {}
         }
@@ -71,7 +71,7 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// 5. HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -80,14 +80,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// 5. Use CORS
+// Ny CORS dia tokony ho alohan'ny Auth
 app.UseCors("AllowAll");
 
-// Exception Middleware
-app.UseMiddleware<Recensement.API.Middleware.ExceptionMiddleware>();
+app.UseMiddleware<ExceptionMiddleware>();
 
-app.UseAuthentication();
-app.UseAuthorization();
+app.UseAuthentication(); 
+app.UseAuthorization(); 
 
 app.MapControllers();
 

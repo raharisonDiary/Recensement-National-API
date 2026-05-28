@@ -8,25 +8,20 @@ namespace Recensement.API.Models
         public Guid Id { get; set; }
 
         [Required]
-        [StringLength(100)]
-        public string Nom { get; set; } = string.Empty;
-
-        [Required]
         [StringLength(20)]
-        public string Cin { get; set; } = string.Empty;
-
-        [Required]
-        [StringLength(20)]
-        public string Role { get; set; } = string.Empty; // Admin, Regional, Agent
+        public string Cin { get; set; } = string.Empty; // Ity no ampiasaina login
 
         [Required]
         [StringLength(255)]
         public string PasswordHash { get; set; } = string.Empty;
 
-        [StringLength(100)]
-        public string? QrCodeSecret { get; set; } // Ho an'ny Login Agent
+        [Required]
+        [StringLength(20)]
+        public string Role { get; set; } = string.Empty; // Admin, Regional, Agent
 
-        [StringLength(100)]
-        public string? RegionAssigned { get; set; }
+        public string? QrCodeSecret { get; set; } // Ho an'ny Agent
+        
+        // Relationship
+        public AgentProfile? Profile { get; set; }
     }
 }
